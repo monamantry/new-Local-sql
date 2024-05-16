@@ -1,0 +1,61 @@
+SELECT ECCT.*,
+EE.person_id person_id,
+       PAPF.person_number person_number,
+       TO_CHAR(ECCT.transaction_amount,'999,999.99') ||' ' || ECCT.billed_currency_code "CHARGE AMOUNT",
+	   (SYSDATE + (-7/24))  mydate,
+	   TRUNC(SYSDATE + (-7/24)) - TRUNC(ECCT.trxn_available_date) DAYS,
+              CASE WHEN :P_TEST_EMAIL_ADDRESS IS NOT NULL THEN
+               :P_TEST_EMAIL_ADDRESS
+            ELSE
+               (SELECT NVL(pea.email_address,'pcard@io.rice.edu')
+                FROM   PER_EMAIL_ADDRESSES PEA
+                WHERE  :P_TEST_EMAIL_ADDRESS IS NULL
+                AND PAPF.PERSON_ID = PEA.PERSON_ID 
+                AND SYSDATE  BETWEEN PEA.DATE_FROM AND NVL(PEA.DATE_TO, SYSDATE + 1) 
+                AND  PEA.MASTERED_IN_LDAP_FLAG ='Y' 
+                AND EMAIL_TYPE='W1') 
+			END EMAIL_ADDRESS,
+       SUBSTR(IC.ccnumber,9) "LAST 4",
+        EE.expense_report_id
+FROM   IBY_CREDITCARD        IC,
+       EXM_CARDS             EC,
+       PER_PERSON_NAMES_F    PPNF,
+       PER_ALL_PEOPLE_F      PAPF,
+       EXM_EXPENSES          EE,
+       EXM_CREDIT_CARD_TRXNS ECCT,
+       PER_ALL_ASSIGNMENTS_M PAAM
+WHERE  IC.instrid = EC.card_reference_id
+AND    EC.card_id  = EE.card_id
+AND    PPNF.name_type = 'GLOBAL'
+AND    PPNF.effective_end_date = TO_DATE('47121231','YYYYMMDD')
+AND    PPNF.person_id = EE.person_id
+AND    TRUNC(PAPF.effective_end_date) = TO_DATE('47121231','YYYYMMDD')
+AND    PAAM.person_id = EE.person_id
+and    PAAM.effective_latest_change = 'Y'
+and    PAAM.primary_flag = 'Y'
+and    (SYSDATE + (-7/24)) BETWEEN PAAM.effective_start_date AND PAAM.effective_end_date
+AND    PAAM.assignment_type = 'E'
+AND    PAAM.assignment_status_type_id IN (1,2)
+AND    PAPF.person_id = EE.person_id
+AND    ECCT.credit_card_trxn_id = 1945922
+--AND    TRUNC((SYSDATE + (-7/24))) - TRUNC(ECCT.trxn_available_date) > 30
+--AND    ECCT.transaction_status = 'VALID'
+AND    ECCT.credit_card_trxn_id = EE.credit_card_trxn_id
+AND    EE.expense_creation_method_code = 'CCUPLOAD'
+AND    ((EE.expense_report_id IS NULL) OR 
+        (EE.expense_report_id IS NOT NULL AND EXISTS
+          (SELECT *
+          FROM   EXM_EXPENSE_REPORTS EER
+           WHERE  EER.expense_report_id   =  EE.expense_report_id
+           AND    EER.expense_status_code ='SAVED')))
+AND    (:P_PERSON_NUMBER IS NULL OR
+        EE.person_id = (SELECT person_id 
+                        FROM   PER_ALL_PEOPLE_F PAPF2
+                        WHERE  PAPF2.person_number = :P_PERSON_NUMBER
+                        AND    TRUNC(PAPF2.EFFECTIVE_END_DATE) = TO_DATE('47121231','YYYYMMDD')))
+and PAPF.PERSON_NUMBER NOT IN ('8013493','475894')
+and PAPF.PERSON_NUMBER  IN ('105420')
+-- expense exclusion list - Reginald DesRoches and Amy Dittmar
+ORDER  BY EE.person_id,
+          SUBSTR(IC.ccnumber,9),
+          EE.start_date
