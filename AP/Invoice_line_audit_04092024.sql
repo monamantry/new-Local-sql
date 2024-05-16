@@ -1,0 +1,88 @@
+select
+        AILA_.INVOICE_ID                                                                                             ,
+        COUNT(DISTINCT AILA_.INVOICE_ID) EVENT_COUNT                                                                 ,
+        AIA_.INVOICE_NUM                                                                                             ,
+        AILA_.LAST_UPDATE_DATE                                                                                       ,
+        AILA_.LAST_UPDATED_BY                                                                                        ,
+        AILA_.AUDIT_ACTION_TYPE_                                                                                     ,
+        AILA_.LINE_NUMBER                                                                                            ,
+        AILA_.AMOUNT                                                                                                 ,
+        PU.USERNAME                                                                                                  ,
+        PPNFV.DISPLAY_NAME                                                                                           ,
+        AILA_.DESCRIPTION                                                                                            ,
+        AILA_.QUANTITY_INVOICED                                                                                      ,
+        AILA_.UNIT_MEAS_LOOKUP_CODE                                                                                  ,
+        AILA_.UNIT_PRICE                                                                                             ,
+        AILA_.PO_HEADER_ID                                                                                           ,
+        PPNFV.PERSON_NAME_ID                                                                                         ,
+        PHA.SEGMENT1 PO_NUM                                                                                          ,
+        AILA_.PO_LINE_ID                                                                                             ,
+        PLA.LINE_NUM PO_LINE_NUM                                                                                     ,
+        DECODE(AILA_.LAST_UPDATED_BY                                                                                 ,
+                        'FIN_Scheduler_svc'                                                                          ,'FIN Scheduler' ,
+                                PPNFV.DISPLAY_NAME) UPDATED_BY                                                       ,
+        DECODE (AILA_.AUDIT_ACTION_TYPE_                                                                             ,
+                        'IMGINSTR'                                                                                   ,'Image Upload',
+                                'HISTORY'                                                                            ,'History',
+                                        'UPDATE'                                                                     ,'Update',
+                                                'DELETE'                                                             ,'Delete',
+                                                        AILA_.AUDIT_ACTION_TYPE_) AUDIT_ACTION
+from
+        AP_INVOICE_LINES_ALL_ AILA_
+LEFT JOIN
+        AP_INVOICES_ALL_ AIA_
+ON
+        AILA_.INVOICE_ID = AIA_.INVOICE_ID
+LEFT JOIN
+        PER_USERS PU
+ON
+        AILA_.LAST_UPDATED_BY = PU.USERNAME
+LEFT JOIN
+        PER_PERSON_NAMES_F_V PPNFV
+ON
+        (
+                (
+                        PU.PERSON_ID=PPNFV.PERSON_ID)
+        AND (
+                        SYSDATE BETWEEN PPNFV.EFFECTIVE_START_DATE AND PPNFV.EFFECTIVE_END_DATE)
+        AND PPNFV.NAME_TYPE ='GLOBAL')
+LEFT JOIN
+        PO_HEADERS_ALL PHA
+ON
+        AILA_.PO_HEADER_ID = PHA.PO_HEADER_ID
+LEFT JOIN
+        PO_LINES_ALL PLA
+ON
+        AILA_.PO_LINE_ID = PLA.PO_LINE_ID
+where
+        (
+                LEAST(:P_Userid) IS NULL
+        OR AILA_.LAST_UPDATED_BY IN (:P_Userid))
+AND     (
+                LEAST(:P_Event_Dt_From) IS NULL
+        OR TO_DATE(new_time(AILA_.LAST_UPDATE_DATE, 'GMT', 'CST') ,'YYYY-MM-DD HH24:MI:SS') >= (:P_Event_Dt_From))
+AND     (
+                LEAST(:P_Event_Dt_To) IS NULL
+        OR TO_DATE(new_time(AILA_.LAST_UPDATE_DATE, 'GMT', 'CST') ,'YYYY-MM-DD HH24:MI:SS') <= (:P_Event_Dt_To))
+        --       AND     AILA_.INVOICE_ID ='3643911'
+GROUP BY
+        AILA_.INVOICE_ID            ,
+        AIA_.INVOICE_NUM            ,
+        AILA_.LAST_UPDATE_DATE      ,
+        AILA_.LAST_UPDATED_BY       ,
+        AILA_.AUDIT_ACTION_TYPE_    ,
+        AILA_.LINE_NUMBER           ,
+        AILA_.AMOUNT                ,
+        PU.USERNAME                 ,
+        PPNFV.DISPLAY_NAME          ,
+        AILA_.DESCRIPTION           ,
+        AILA_.QUANTITY_INVOICED     ,
+        AILA_.UNIT_MEAS_LOOKUP_CODE ,
+        AILA_.UNIT_PRICE            ,
+        AILA_.PO_HEADER_ID          ,
+        PPNFV.PERSON_NAME_ID        ,
+        PHA.SEGMENT1                ,
+        AILA_.PO_LINE_ID            ,
+        PLA.LINE_NUM
+order by
+        AILA_.LAST_UPDATE_DATE DESC

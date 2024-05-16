@@ -1,0 +1,79 @@
+select  
+	a.PERSON_NUMBER as "KEY",
+    'Pcard Expenses over 30' TEMPLATE,
+    'en-US' LOCALE,
+    'HTML' OUTPUT_FORMAT,
+    'EMAIL' DEL_CHANNEL,
+    'Pcard Expenses over 30' OUTPUT_NAME,
+    a.EMAIL_ADDRESS PARAMETER1, 												--Email address
+    '' PARAMETER2, --CC TO
+    'Pcards<pcards@io.rice.edu>' PARAMETER3, 											--EMAIL FROM
+	'Rice University Expense Charges Outstanding 30 Days Notification' PARAMETER4, --EMAIL SUBJECT
+	'' PARAMETER5, --Message body Empty, using BI TEMPLATE as HTML
+    'true' PARAMETER6, ---Attachment using yes to include the HTML TEMPLATE
+    'pcards@rice.edu' PARAMETER7,												--Reply-To
+    '' PARAMETER8 																--Bcc 
+from 
+
+(SELECT EE.person_id person_id,
+       PAPF.person_number person_number,
+       TO_CHAR(ECCT.transaction_amount,'999,999.99') ||' ' || ECCT.billed_currency_code "CHARGE AMOUNT",
+	   (SYSDATE + (-7/24))  mydate,
+	   TRUNC(SYSDATE + (-7/24)) - TRUNC(ECCT.trxn_available_date) DAYS,
+       ECCT.merchant_name1,
+       TRIM(ECCT.merchant_address1) || ' ' ||
+       TRIM(ECCT.merchant_city) || ' ' ||
+       TRIM(ECCT.merchant_province_state) || ' ' ||
+	   TRIM(ECCT.merchant_postal_code) || ' ' ||
+       TRIM(ECCT.merchant_country)                    LOCATION,
+       TRUNC(ECCT.transaction_date) "CHARGE DATE",
+       ' '|| PPNF.KNOWN_AS || ' ' || PPNF.LAST_NAME || ',' "SALUTATION",
+       CASE WHEN :P_TEST_EMAIL_ADDRESS IS NOT NULL THEN
+               :P_TEST_EMAIL_ADDRESS
+            ELSE
+               (SELECT NVL(pea.email_address,'pcard@io.rice.edu')
+                FROM   PER_EMAIL_ADDRESSES PEA
+                WHERE  :P_TEST_EMAIL_ADDRESS IS NULL
+                AND    PEA.email_type = 'W1'
+                AND    PEA.person_id = EE.person_id) 
+			END EMAIL_ADDRESS,
+       SUBSTR(IC.ccnumber,9) "LAST 4"
+FROM   IBY_CREDITCARD        IC,
+       EXM_CARDS             EC,
+       PER_PERSON_NAMES_F    PPNF,
+       PER_ALL_PEOPLE_F      PAPF,
+       EXM_EXPENSES          EE,
+       EXM_CREDIT_CARD_TRXNS ECCT,
+       PER_ALL_ASSIGNMENTS_M PAAM
+WHERE  IC.instrid = EC.card_reference_id
+AND    EC.card_id  = EE.card_id
+AND    PPNF.name_type = 'GLOBAL'
+AND    PPNF.effective_end_date = TO_DATE('47121231','YYYYMMDD')
+AND    PPNF.person_id = EE.person_id
+AND    TRUNC(PAPF.effective_end_date) = TO_DATE('47121231','YYYYMMDD')
+AND    PAAM.person_id = EE.person_id
+and    PAAM.effective_latest_change = 'Y'
+and    PAAM.primary_flag = 'Y'
+and    (SYSDATE + (-7/24)) BETWEEN PAAM.effective_start_date AND PAAM.effective_end_date
+AND    PAAM.assignment_type = 'E'
+AND    PAAM.assignment_status_type_id IN (1,2)
+AND    PAPF.person_id = EE.person_id
+AND    TRUNC((SYSDATE + (-7/24))) - TRUNC(ECCT.trxn_available_date) > 30
+AND    ECCT.transaction_status = 'VALID'
+AND    ECCT.credit_card_trxn_id = EE.credit_card_trxn_id
+AND    EE.expense_creation_method_code = 'CCUPLOAD'
+AND    ((EE.expense_report_id IS NULL) OR 
+        EE.expense_report_id IS NOT NULL AND NOT EXISTS
+          (SELECT 'X'
+           FROM   EXM_EXPENSE_REPORTS EER
+           WHERE  EER.expense_report_id   =  EE.expense_report_id
+           AND    EER.expense_status_code IN ('PAID','INVOICE_CANCELED','PARTIAL_PAID','INVOICED','APPROVAL_COMPLETE')))
+AND    (:P_PERSON_NUMBER IS NULL OR
+        EE.person_id = (SELECT person_id 
+                        FROM   PER_ALL_PEOPLE_F PAPF2
+                        WHERE  PAPF2.person_number = :P_PERSON_NUMBER
+                        AND    TRUNC(PAPF2.EFFECTIVE_END_DATE) = TO_DATE('47121231','YYYYMMDD')))
+ORDER  BY EE.person_id,
+          SUBSTR(IC.ccnumber,9),
+          EE.start_date ) a
+--where a.PERSON_NUMBER IN('100603','262851','477232')
