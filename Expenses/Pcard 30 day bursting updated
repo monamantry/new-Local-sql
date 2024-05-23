@@ -16,9 +16,9 @@ select
 from 
 (SELECT EE.person_id person_id,
        PAPF.person_number person_number,
-       TO_CHAR(ECCT.transaction_amount,'999,999.99') ||' ' || ECCT.billed_currency_code "CHARGE AMOUNT",
+       TO_CHAR(ECCT.BILLED_AMOUNT,'999,999,999,999,999.99') ||' ' || ECCT.billed_currency_code "CHARGE AMOUNT",
 	   (SYSDATE + (-7/24))  mydate,
-	   TRUNC(SYSDATE + (-7/24)) - TRUNC(ECCT.trxn_available_date) DAYS,
+	   TRUNC(SYSDATE + (-7/24)) - TRUNC(ECCT.TRANSACTION_DATE) DAYS,
        ECCT.merchant_name1,
        TRIM(ECCT.merchant_address1) || ' ' ||
        TRIM(ECCT.merchant_city) || ' ' ||
@@ -60,7 +60,7 @@ and    (SYSDATE + (-7/24)) BETWEEN PAAM.effective_start_date AND PAAM.effective_
 AND    PAAM.assignment_type = 'E'
 AND    PAAM.assignment_status_type_id IN (1,2)
 AND    PAPF.person_id = EE.person_id
-AND    TRUNC((SYSDATE + (-7/24))) - TRUNC(ECCT.trxn_available_date) > 30
+AND    TRUNC((SYSDATE + (-7/24))) - TRUNC(ECCT.TRANSACTION_DATE) > 30
 AND    ECCT.transaction_status = 'VALID'
 AND    ECCT.credit_card_trxn_id = EE.credit_card_trxn_id
 AND    EE.expense_creation_method_code = 'CCUPLOAD'
