@@ -1,0 +1,54 @@
+    
+SELECT
+              EERDIST.CODE_COMBINATION_ID                 ,
+        EERDIST.EXPENSE_DIST_ID                     ,
+        EERDIST.EXPENSE_REPORT_ID                   ,
+        EERDIST.PJC_PROJECT_ID                      ,
+        EERDIST.PJC_TASK_ID                         ,
+        EERDIST.REIMBURSABLE_AMOUNT                 ,
+        EXP.ASSIGNMENT_ID                           ,
+        EXP.DESCRIPTION            ,
+        EXP.EXPENSE_ID              ,
+        EXP.EXPENSE_REPORT_ID AS EXPENSE_REPORT_ID1       ,
+        EXP.PERSON_ID    EXPENSE_REPORT_PERSON_ID       ,
+        EER.EXPENSE_REPORT_ID AS EXPENSE_REPORT_ID2    ,
+        EER.EXPENSE_REPORT_NUM                         ,
+        EER.EXPENSE_STATUS_CODE                        ,
+        EER.REPORT_SUBMIT_DATE                         ,
+        EETYP.EXPENSE_TYPE_ID,
+        EETYP.NAME                          ,
+        EERAPR.EVENT                              ,
+        EERAPR.EVENT_PERFORMER_ID                 ,
+        EERAPR.EVENT_DATE                         ,
+        EERAPR.APPROVAL_LEVEL                     ,
+        EERAPR.EXPENSE_STATUS_CODE APPROVAL_STATUS,
+        EERAPR.AUDIT_CODE                         ,
+        EERAPR.AUDIT_RETURN_REASON_CODE           ,
+        EERAPR.EXPORT_REJECT_CODE           ,
+        PPNFV.PERSON_ID,
+        PPNFV.LIST_NAME,
+         PPNFV1.PERSON_ID   APPROVER_PERSON_ID,
+         PPNFV1.LIST_NAME   APPROVER_NAME  
+FROM
+        EXM_EXPENSES EXP           
+        LEFT JOIN  EXM_EXPENSE_REPORTS EER  ON 
+         (EXP.EXPENSE_REPORT_ID = EER.EXPENSE_REPORT_ID)
+        LEFT JOIN EXM_EXPENSE_DISTS EERDIST   ON
+        (EERDIST.EXPENSE_REPORT_ID = EXP.EXPENSE_REPORT_ID
+        AND EERDIST.EXPENSE_ID   = EXP.EXPENSE_ID ) 
+        LEFT JOIN EXM_EXPENSE_TYPES EETYP   ON
+        EXP.EXPENSE_TYPE_ID           = EETYP.EXPENSE_TYPE_ID
+        LEFT JOIN PER_PERSON_NAMES_F_V PPNFV 
+        ON EXP.PERSON_ID   = PPNFV.PERSON_ID
+        LEFT JOIN EXM_EXP_REP_PROCESSING EERAPR
+        ON  EXP.EXPENSE_REPORT_ID = EERAPR.EXPENSE_REPORT_ID
+        LEFT JOIN PER_PERSON_NAMES_F_V PPNFV1
+        ON EERAPR.EVENT_PERFORMER_ID    = PPNFV1.PERSON_ID
+        
+WHERE
+ EER.EXPENSE_STATUS_CODE IN ('PENDING_AUDIT', 'PEND_IND_APPROVAL', 'PEND_MGR_APPROVAL')  
+ AND PPNFV1.LIST_NAME <> 'One, ExpenseAuditor'  
+ AND  EERAPR.EVENT_PERFORMER_ID ='300000013799489'   
+
+
+--90970 300000013799489 stephaine Post

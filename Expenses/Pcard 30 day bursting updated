@@ -69,7 +69,7 @@ AND    ((EE.expense_report_id IS NULL) OR
           (SELECT *
           FROM   EXM_EXPENSE_REPORTS EER
            WHERE  EER.expense_report_id   =  EE.expense_report_id
-           AND    EER.expense_status_code ='SAVED')))
+           AND    EER.expense_status_code NOT IN ('APPROVAL_COMPLETE','INVOICE_CANCELLED','INVOICED','PAID','PARTIAL_PAID','PENDING_AUDIT','PEND_MGR_APPROVAL'))))
 AND    (:P_PERSON_NUMBER IS NULL OR
         EE.person_id = (SELECT person_id 
                         FROM   PER_ALL_PEOPLE_F PAPF2
@@ -77,6 +77,4 @@ AND    (:P_PERSON_NUMBER IS NULL OR
                         AND    TRUNC(PAPF2.EFFECTIVE_END_DATE) = TO_DATE('47121231','YYYYMMDD')))
 and PAPF.PERSON_NUMBER NOT IN ('8013493','475894')
 -- expense exclusion list - Reginald DesRoches and Amy Dittmar
-ORDER  BY EE.person_id,
-          SUBSTR(IC.ccnumber,9),
-          EE.start_date) a
+) a
