@@ -1,1 +1,23 @@
-Unable to merge unrelated histories in this repository.
+SET VARIABLE PREFERRED_CURRENCY='User Preferred Currency 1',PREFERRED_CURRENCY='User Preferred Currency 1';SELECT 
+   CorporateCard.s_1 saw_0,
+   CorporateCard.s_2 saw_1,
+   EmployeeDetails.s_11 saw_2,
+   EmployeeDetails.s_12 saw_3,
+   EmployeeDetails.s_13 saw_4,
+   CorporateCard.s_3 saw_5
+ FROM (
+                SELECT
+                        "Expenses - Expense Transactions Real Time"."Employee"."Employee Name" s_1,
+                        "Expenses - Expense Transactions Real Time"."Employee"."Employee Number" s_2,
+						"Expenses - Expense Transactions Real Time"."Corporate Cards Details"."Creation Date" s_3
+                FROM
+                        "Expenses - Expense Transactions Real Time") CorporateCard INNER JOIN (
+                SELECT
+                        DESCRIPTOR_IDOF("OTBI HCM Prompts"."Assignment Manager List Unsecured"."Person Name") s_11,
+                        "OTBI HCM Prompts"."Assignment Manager List Unsecured"."Person Name" s_12                 ,
+                        "OTBI HCM Prompts"."Assignment Manager List Unsecured"."Person Number" s_13
+                FROM
+                        "OTBI HCM Prompts") EmployeeDetails ON CorporateCard.s_2 = EmployeeDetails.s_13
+ WHERE 
+(CorporateCard.s_3 >= (timestamp '2021-07-01 06:00:00'))
+ ORDER BY saw_0, saw_1, saw_2, saw_3, saw_4, saw_5
